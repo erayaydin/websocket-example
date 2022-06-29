@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <title>Scala & Akka Chat Room Example</title>
+
+    <!--suppress JSUnresolvedLibraryURL -->
+    <link rel="stylesheet"
+          href="//cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+          crossorigin="anonymous">
+</head>
+<body>
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-grid">
+                <!--suppress HtmlFormInputWithoutLabel -->
+                <textarea id="chat" class="form-control" readonly rows="30">Welcome to chat!</textarea>
+
+                <form id="newMessageForm" autocomplete="off" class="mt-2">
+                    <div class="input-group">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input type="text" name="message" class="form-control" placeholder="Say Hi!" />
+                        <button class="btn btn-secondary" type="submit">Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="d-grid" id="userList"></div>
+        </div>
+    </div>
+</div>
+
+<!--suppress JSUnresolvedLibraryURL -->
+<script src="//cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript">
+    function askName() {
+        let name = prompt("Enter your name:") ?? "Unknown"
+        if (name.length === 0)
+            name = "Unknown"
+
+        return name;
+    }
+
+    function initWs(address, callback)
+    {
+        const websocket = new WebSocket(address)
+        websocket.onmessage = callback
+        return websocket
+    }
+
+    function appendToChat(message)
+    {
+        chat.value = chat.value + "\n" + message
+        chat.scrollTop = chat.scrollHeight
+    }
+
+    function addToUserList(user)
+    {
+        const userElement = document.createElement("button")
+        userElement.className = "btn btn-primary mb-2"
+        userElement.appendChild(document.createTextNode(user))
+        userElement.id = "user-"+user
+        userList.appendChild(userElement)
+    }
+
+    function removeFromUserList(user)
+    {
+        document.getElementById("user-"+user).remove()
+    }
+
+    const userList = document.getElementById("userList")
+    const chat = document.getElementById("chat")
+    const form = document.getElementById("newMessageForm")
+    const name = askName()
+    const ws = initWs("ws://" + location.host + "/api/chat?name=" + encodeURIComponent(name), function(event) {
+        const response = JSON.parse(event.data)
+
+        if (response.event === "users") {
+            const users = response.data.users
+            users.forEach(function (user) {
+                addToUserList(user)
+            })
+        } else if (response.event === "message") {
+            appendToChat(response.data.message)
+        } else if (response.event === "join") {
+            const user = response.data.user
+            appendToChat(user + " joined!")
+            addToUserList(user)
+        } else if (response.event === "leave") {
+            const user = response.data.user
+            appendToChat(user + " left!")
+            removeFromUserList(user)
+        }
+    })
+    form.onsubmit = function(event) {
+        event.preventDefault()
+
+        const message = event.target.elements['message'].value.trim()
+
+        if (message === "")
+            return
+
+        ws.send(message)
+        event.target.elements['message'].value = ""
+    }
+</script>
+</body>
+</html>

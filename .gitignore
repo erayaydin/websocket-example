@@ -1,0 +1,24 @@
+### IDEA ###
+.idea/
+
+### Linux ###
+*~
+
+### SBT ###
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.history
+.cache
+.lib/
+
+### BSP ###
+.bsp/
+
+### Scala ###
+*.class
+*.log
+hs_err_pid*
